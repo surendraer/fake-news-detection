@@ -85,7 +85,7 @@ const AboutPage = () => {
           animate="visible"
           variants={fadeUp}
         >
-          <h1>About VerifyNews</h1>
+          <h1>About TASDEEQ</h1>
           <p>
             An AI-powered platform that helps users identify misinformation
             using machine learning and natural language processing.
@@ -106,7 +106,7 @@ const AboutPage = () => {
           <div className="about-text">
             <p>
               In an era of information overload, distinguishing between real and
-              fake news has become increasingly challenging. VerifyNews
+              fake news has become increasingly challenging. TASDEEQ
               leverages artificial intelligence to help users make informed
               decisions about the news they consume.
             </p>

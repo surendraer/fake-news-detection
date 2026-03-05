@@ -41,7 +41,7 @@ const LoginPage = () => {
             <HiShieldCheck />
           </div>
           <h2>Welcome Back</h2>
-          <p>Sign in to your VerifyNews account</p>
+          <p>Sign in to your TASDEEQ account</p>
         </div>
 
         {error && (

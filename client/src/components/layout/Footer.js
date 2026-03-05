@@ -12,7 +12,7 @@ const Footer = () => {
             <div className="footer-brand-icon">
               <HiShieldCheck />
             </div>
-            VerifyNews
+            TASDEEQ
           </div>
           <p className="footer-desc">
             AI-powered fake news detection platform. Analyze any news article
@@ -52,7 +52,7 @@ const Footer = () => {
       </div>
 
       <div className="footer-bottom">
-        <span>2026 VerifyNews. All rights reserved.</span>
+        <span>2026 TASDEEQ. All rights reserved.</span>
         <span>Built with React, Node.js, and Machine Learning</span>
       </div>
     </footer>

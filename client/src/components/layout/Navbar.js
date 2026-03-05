@@ -62,7 +62,7 @@ const Navbar = () => {
             <div className="navbar-brand-icon">
               <HiShieldCheck />
             </div>
-            <span>VerifyNews</span>
+            <span>TASDEEQ</span>
           </Link>
 
           <div className="navbar-links">

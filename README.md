@@ -1,4 +1,4 @@
-# VerifyNews - AI Fake News Detection Platform
+# TASDEEQ - AI Fake News Detection Platform
 
 A full-stack web application that detects fake news using machine learning and natural language processing. Supports **text, image, and video** analysis. Built with React, Node.js, MongoDB, and a Python ML microservice.
 

@@ -55,7 +55,7 @@ const RegisterPage = () => {
             <HiShieldCheck />
           </div>
           <h2>Create Account</h2>
-          <p>Join VerifyNews and fight misinformation</p>
+          <p>Join TASDEEQ and fight misinformation</p>
         </div>
 
         {displayError && (
