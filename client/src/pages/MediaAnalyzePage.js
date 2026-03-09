@@ -25,6 +25,7 @@ const MediaAnalyzePage = () => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [title, setTitle] = useState('');
+  const [claim, setClaim] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -37,8 +38,8 @@ const MediaAnalyzePage = () => {
         toast.error('Please select a valid image file.');
         return;
       }
-      if (selected.size > 20 * 1024 * 1024) {
-        toast.error('Image must be under 20 MB.');
+      if (selected.size > 2.5 * 1024 * 1024) {
+        toast.error('Image must be under 2.5 MB.');
         return;
       }
     } else {
@@ -87,7 +88,7 @@ const MediaAnalyzePage = () => {
     }
 
     const action = mode === 'image'
-      ? analyzeImage({ file, title })
+      ? analyzeImage({ file, title, claim })
       : analyzeVideo({ file, title });
 
     const result = await dispatch(action);
@@ -102,6 +103,7 @@ const MediaAnalyzePage = () => {
     setFile(null);
     setPreview(null);
     setTitle('');
+    setClaim('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     dispatch(clearCurrentAnalysis());
   };
@@ -202,6 +204,19 @@ const MediaAnalyzePage = () => {
                 />
               </div>
 
+              {mode === 'image' && (
+                <div className="form-group">
+                  <label className="form-label">What is this image claiming? (optional but improves accuracy)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. This photo shows the 2024 flood in Valencia..."
+                    value={claim}
+                    onChange={(e) => setClaim(e.target.value)}
+                  />
+                </div>
+              )}
+
               <div
                 className={`upload-zone ${file ? 'has-file' : ''}`}
                 onClick={() => !file && fileInputRef.current?.click()}
@@ -218,7 +233,7 @@ const MediaAnalyzePage = () => {
                     </p>
                     <p className="upload-hint">
                       {mode === 'image'
-                        ? 'JPEG, PNG, WebP, BMP — max 20 MB'
+                        ? 'JPEG, PNG, WebP, BMP — max 2.5 MB'
                         : 'MP4, AVI, WebM, MOV, MKV — max 100 MB'}
                     </p>
                   </div>
@@ -531,12 +546,61 @@ const MediaAnalyzePage = () => {
                       </>
                     )}
 
+                    {/* AI Analysis Summary (Groq Vision) */}
+                    {(pred?.details?.reasoning || pred?.details?.imageDescription) && (
+                      <div className="detail-section">
+                        <div className="detail-section-title">AI Analysis Summary</div>
+                        {pred.details.imageDescription && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">What the image shows:</span>
+                            <span className="ai-summary-text">{pred.details.imageDescription}</span>
+                          </div>
+                        )}
+                        {pred.details.imageMatchLabel && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">Image vs Claim:</span>
+                            <span className={`ai-summary-text ai-summary-verdict ${pred.details.imageMatchLabel.toLowerCase()}`}>
+                              {pred.details.imageMatchLabel}
+                              {pred.details.imageMatchReasoning ? ` — ${pred.details.imageMatchReasoning}` : ''}
+                            </span>
+                          </div>
+                        )}
+                        {pred.details.claimFactLabel && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">Claim Fact-Check:</span>
+                            <span className={`ai-summary-text ai-summary-verdict ${pred.details.claimFactLabel.toLowerCase()}`}>
+                              {pred.details.claimFactLabel}
+                              {pred.details.claimFactReasoning ? ` — ${pred.details.claimFactReasoning}` : ''}
+                            </span>
+                          </div>
+                        )}
+                        {pred.details.reasoning && !pred.details.imageMatchLabel && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">Reasoning:</span>
+                            <span className="ai-summary-text">{pred.details.reasoning}</span>
+                          </div>
+                        )}
+                        {pred.details.reasoning && pred.details.imageMatchLabel && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">Final Verdict Reasoning:</span>
+                            <span className="ai-summary-text">{pred.details.reasoning}</span>
+                          </div>
+                        )}
+                        {pred.details.source && (
+                          <div className="ai-summary-item">
+                            <span className="ai-summary-label">Powered by:</span>
+                            <span className="ai-summary-text ai-summary-source">{pred.details.model || pred.details.source}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Info note */}
                     <div className="media-info-note">
                       <FiInfo />
                       <span>
                         {currentAnalysis?.analysisType === 'image'
-                          ? 'Analysis uses Error Level Analysis (ELA), metadata inspection, and pixel statistics to detect manipulations.'
+                          ? 'Analysis uses AI vision (Llama 4 Scout) to assess image authenticity and match it against the provided claim.'
                           : 'Analysis extracts frames and checks temporal consistency, noise profiles, and per-frame ELA.'}
                       </span>
                     </div>
