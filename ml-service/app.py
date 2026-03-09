@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+from features import StructuralFeatureExtractor
 from PIL import Image, ImageChops, ImageEnhance, ExifTags
 
 # Setup
@@ -40,6 +41,7 @@ stop_words = set(stopwords.words('english'))
 # Global model references
 model = None
 vectorizer = None
+struct_extractor = None
 
 
 def preprocess_text(text: str) -> str:
@@ -57,16 +59,24 @@ def preprocess_text(text: str) -> str:
 
 
 def load_model():
-    """Load trained model and vectorizer."""
-    global model, vectorizer
+    """Load trained model, vectorizer, and structural extractor."""
+    global model, vectorizer, struct_extractor
 
     model_path = os.path.join(MODELS_DIR, 'fake_news_model.joblib')
     vectorizer_path = os.path.join(MODELS_DIR, 'tfidf_vectorizer.joblib')
+    struct_path = os.path.join(MODELS_DIR, 'structural_extractor.joblib')
 
     if os.path.exists(model_path) and os.path.exists(vectorizer_path):
         model = joblib.load(model_path)
         vectorizer = joblib.load(vectorizer_path)
-        logger.info('Trained model loaded successfully.')
+        if os.path.exists(struct_path):
+            try:
+                struct_extractor = joblib.load(struct_path)
+                logger.info('Trained model + structural extractor loaded successfully.')
+            except Exception as e:
+                logger.warning(f'Could not load structural extractor ({e}). Retrain the model.')
+        else:
+            logger.info('Trained model loaded (no structural extractor — old model).')
         return True
     else:
         logger.warning('No trained model found. Service will use heuristic analysis.')
@@ -197,6 +207,7 @@ def heuristic_predict(text: str) -> dict:
     return {
         'label': label,
         'confidence': round(confidence, 2),
+        'credibility_score': score,
         'details': {
             'sentimentScore': 0,
             'subjectivityScore': 0,
@@ -231,18 +242,41 @@ async def predict(request: PredictionRequest):
     if model is not None and vectorizer is not None:
         try:
             processed = preprocess_text(text)
-            features = vectorizer.transform([processed])
-            prediction = model.predict(features)[0]
+            tfidf_features = vectorizer.transform([processed])
+
+            # Combine with structural features if the new model is loaded
+            if struct_extractor is not None:
+                from scipy.sparse import hstack, csr_matrix
+                struct_feat = csr_matrix(struct_extractor.transform([text]))
+                features = hstack([tfidf_features, struct_feat])
+            else:
+                features = tfidf_features
+
             probabilities = model.predict_proba(features)[0]
 
-            label = 'FAKE' if prediction == 1 else 'REAL'
-            confidence = round(float(np.max(probabilities)) * 100, 2)
+            # P(FAKE) from ML model
+            ml_fake_prob = float(probabilities[1])
 
-            if confidence < 55:
-                label = 'UNCERTAIN'
-
-            # Run heuristic for additional details
+            # Run heuristic for credibility signals and details
             heuristic = heuristic_predict(text)
+            # Convert heuristic credibility score (0=fake, 100=real) to fake probability
+            heuristic_credibility = heuristic.get('credibility_score', 50)
+            heuristic_fake_prob = 1.0 - (heuristic_credibility / 100.0)
+
+            # Blend: the ISOT-trained model is biased toward FAKE due to domain-specific
+            # writing-style patterns (Reuters vs WorldNetDaily). Calibrate by weighting
+            # in the heuristic's source-agnostic credibility signals.
+            blended = 0.55 * ml_fake_prob + 0.45 * heuristic_fake_prob
+
+            if blended >= 0.65:
+                label = 'FAKE'
+                confidence = round(blended * 100, 2)
+            elif blended <= 0.35:
+                label = 'REAL'
+                confidence = round((1.0 - blended) * 100, 2)
+            else:
+                label = 'UNCERTAIN'
+                confidence = round(max(blended, 1.0 - blended) * 100, 2)
 
             return {
                 'label': label,
@@ -265,6 +299,7 @@ async def model_info():
         'model_loaded': model is not None,
         'model_type': type(model).__name__ if model else None,
         'vectorizer_loaded': vectorizer is not None,
+        'structural_extractor_loaded': struct_extractor is not None,
     }
 
 
