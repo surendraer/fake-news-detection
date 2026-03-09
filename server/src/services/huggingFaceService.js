@@ -3,6 +3,8 @@ const logger = require('../utils/logger');
 
 const HF_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
 const HF_BASE = 'https://router.huggingface.co/hf-inference/models';
+// Some models (e.g. BLIP) are not on the router — use the direct inference API
+const HF_INFERENCE_BASE = 'https://api-inference.huggingface.co/models';
 
 // Primary text fake-news classifier (RoBERTa fine-tuned on LIAR dataset)
 // Labels: LABEL_0 = FAKE, LABEL_1 = REAL
@@ -15,6 +17,9 @@ const TEXT_MODEL_FALLBACK = 'GonzaloA/fake_news_model';
 // Image deepfake / AI-generated detection
 // Labels: Fake / Real  
 const IMAGE_MODEL = 'prithivMLmods/Deep-Fake-Detector-v2-Model';
+
+// Image captioning — extracts a natural language description from an image
+const CAPTION_MODEL = 'Salesforce/blip-image-captioning-large';
 
 const RETRY_DELAYS = [2000, 5000, 10000];
 
@@ -199,6 +204,49 @@ class HuggingFaceService {
     return this._withRetry(async () => {
       const raw = await this._postBinary(IMAGE_MODEL, imageBuffer, mimeType);
       return this._mapImageResult(raw);
+    });
+  }
+
+  /**
+   * Generate a natural language description of an image using BLIP captioning.
+   * Returns a plain string, e.g. "a flooded street with cars submerged in water".
+   * @param {Buffer} imageBuffer
+   * @param {string} mimeType  e.g. 'image/jpeg'
+   * @returns {Promise<string>}
+   */
+  static async describeImage(imageBuffer, mimeType) {
+    return this._withRetry(async () => {
+      // BLIP is not on the router — call the direct HF inference API
+      const res = await fetch(`${HF_INFERENCE_BASE}/${CAPTION_MODEL}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`,
+          'Content-Type': mimeType,
+        },
+        body: imageBuffer,
+      });
+
+      if (res.status === 503) {
+        const err = new Error(`${CAPTION_MODEL} is loading`);
+        err.isLoading = true;
+        throw err;
+      }
+      if (res.status === 429) {
+        const err = new Error('HuggingFace rate limit hit');
+        err.isRateLimit = true;
+        throw err;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `HuggingFace BLIP returned ${res.status}`);
+      }
+
+      const raw = await res.json();
+      // BLIP returns: [{ generated_text: "..." }]
+      const arr = Array.isArray(raw) ? raw : [raw];
+      const caption = arr[0]?.generated_text || arr[0]?.label || '';
+      if (!caption) throw new Error('BLIP returned empty caption');
+      return caption.trim();
     });
   }
 }
