@@ -47,7 +47,7 @@ function App() {
       <Navbar />
       <main>
         <Routes>
-          <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/analyze" element={<ProtectedRoute><AnalyzePage /></ProtectedRoute>} />
           <Route path="/media-analyze" element={<ProtectedRoute><MediaAnalyzePage /></ProtectedRoute>} />
           <Route path="/wall-of-fake" element={<WallOfFakePage />} />
