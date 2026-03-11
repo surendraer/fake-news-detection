@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { HiShieldCheck, HiMenu, HiX } from 'react-icons/hi';
-import { FiSun, FiMoon, FiUser, FiLogOut, FiBarChart2, FiClock } from 'react-icons/fi';
+import { FiSun, FiMoon, FiLogOut, FiBarChart2, FiClock } from 'react-icons/fi';
 import { logout } from '../../store/slices/authSlice';
 import { toggleTheme, closeMobileMenu, toggleMobileMenu } from '../../store/slices/uiSlice';
 import './Navbar.css';
