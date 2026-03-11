@@ -514,8 +514,8 @@ const MediaAnalyzePage = () => {
                       </>
                     )}
 
-                    {/* AI Analysis Summary (Groq Vision) */}
-                    {(pred?.details?.reasoning || pred?.details?.imageDescription) && (
+                    {/* AI Analysis Summary (Groq Vision — image only) */}
+                    {currentAnalysis?.analysisType !== 'video' && (pred?.details?.reasoning || pred?.details?.imageDescription) && (
                       <div className="detail-section">
                         <div className="detail-section-title">AI Analysis Summary</div>
                         {pred.details.imageDescription && (
