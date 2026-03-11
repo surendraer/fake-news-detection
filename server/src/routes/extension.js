@@ -13,6 +13,7 @@ const router = express.Router();
 const extensionLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
+  trustProxy: true, // Required for Render, Railway, Heroku (respects X-Forwarded-For)
   keyGenerator: (req) => req.headers['x-extension-key'] || req.ip,
   message: { success: false, message: 'Extension rate limit reached, please slow down' },
 });

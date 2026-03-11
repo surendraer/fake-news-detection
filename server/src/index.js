@@ -60,6 +60,7 @@ app.use(
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
+  trustProxy: true, // Required for Render, Railway, Heroku (respects X-Forwarded-For)
   message: { success: false, message: 'Too many requests, please try again later' },
 });
 app.use('/api/', limiter);
@@ -68,6 +69,7 @@ app.use('/api/', limiter);
 const analysisLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10,
+  trustProxy: true, // Required for Render, Railway, Heroku (respects X-Forwarded-For)
   message: { success: false, message: 'Too many analysis requests, please slow down' },
 });
 app.use('/api/analysis', analysisLimiter);
